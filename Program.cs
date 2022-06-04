@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System;
 using Key = Gdk.Key;
 using static Direction;
-// git remote set-url origin https://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@github.com/HMkrtich/2048.git
+using Timeout = GLib.Timeout;
 enum Direction{
     Right,
     Left,
@@ -53,6 +53,10 @@ class MovingBoard{
     public void repeat(){
         if(permitted())
             goBack();
+    }
+    public Direction getRandDirection(){
+        Direction[] dirs={Up,Down,Left,Right};
+        return dirs[rand.Next(4)];
     }
     public void restart(){
         initBoard();
@@ -294,6 +298,7 @@ class View : DrawingArea {
     MovingBoard game=new MovingBoard(4);
     int size; // dimension
     bool menu=true;
+    double timer=5,dt=0.03;
     public View(){
         AddEvents((int)EventMask.KeyPressMask);
         AddEvents((int)EventMask.ButtonPressMask);
@@ -318,6 +323,7 @@ class View : DrawingArea {
             c.Rectangle(x: 120, y: 50, width: 100, height: 60);
             c.Rectangle(x: 230, y: 50, width: 100, height: 60);
             c.Rectangle(x: 340, y: 50, width: 100, height: 60);
+            c.Rectangle(x: 120, y: 115, width: 210, height: 30);
             c.Rectangle(x: 0, y: 150, width: 450, height: 450);
             c.Fill();
             for(int i=0;i<size;i++){
@@ -335,6 +341,8 @@ class View : DrawingArea {
             c.SetSourceColor(grey); // Displaying the Score
             centerText(c,390,60,15,"Score");
             centerText(c,390,85,20,game.getScore().ToString());
+            centerText(c,390,60,15,"Score"); // Displaying the Timer
+            centerText(c,225,130,20,timer.ToString());
             c.SetSourceColor(light_green);  // Displaying Repeat button
             centerText(c,280,75,15,"REPEAT");
             c.SetSourceColor(light_green); // Displaying Restart button
@@ -360,16 +368,19 @@ class View : DrawingArea {
         if(menu){
             if(x<=320 && x>=130 && y<=240 && y>=180){
                 game=new MovingBoard(3);
+                timer=5;
                 size=3;
                 menu=!menu;
             }
             if(x<=320 && x>=130 && y<=330 && y>=270){
                 game=new MovingBoard(4);
+                timer=5;
                 size=4;
                 menu=!menu;
             }
             if(x<=320 && x>=130 && y<=420 && y>=360){
                 game=new MovingBoard(5);
+                timer=5;
                 size=5;
                 menu=!menu;
             }
@@ -377,20 +388,37 @@ class View : DrawingArea {
         else{
             if(x<=330 && x>=230 && y<=110 && y>=50){
                 game.repeat();
+                timer=5;
             }
             if(x<=220 && x>=120 && y<=110 && y>=50){
                 game.restart();
+                timer=5;
             }
             if(x<=110 && x>=10 && y<=110 && y>=50){
                 menu=true;
                 game.restart();
+                timer=5;
             }
         }
         QueueDraw();
         return true;
     }
+    void moveRandom(){
+        move(game.getRandDirection());
+    }
     public void move(Direction dir){
         game.play(dir);
+    }
+    public void resetTimer(){
+        timer=5;
+    }
+    public void updateTime(){
+        timer-=dt;
+        timer=Math.Round(timer, 2);
+        if(timer<=0){
+            moveRandom();
+            timer=5;
+        }
     }
 }
 class MyWindow : Gtk.Window {
@@ -398,16 +426,30 @@ class MyWindow : Gtk.Window {
     public MyWindow() : base("2048") {
         Resize(450, 600);
         Add(view);  // add an Area to the window
+        Timeout.Add(30, on_timeout);
+    }
+     bool on_timeout() {
+        view.updateTime();
+        QueueDraw();
+        return true;
     }
     protected override bool OnKeyPressEvent(EventKey e) {
-        if (e.Key == Key.Left)
+        if (e.Key == Key.Left){
             view.move(Left);
-        else if (e.Key == Key.Right)
+            view.resetTimer();
+        }
+        else if (e.Key == Key.Right){
             view.move(Right);
-        else if (e.Key == Key.Up)
+            view.resetTimer();
+        }
+        else if (e.Key == Key.Up){
             view.move(Up);
-        else if (e.Key == Key.Down)
+            view.resetTimer();
+        }
+        else if (e.Key == Key.Down){
             view.move(Down);
+            view.resetTimer();
+        }
         QueueDraw();
         return true;
     }
