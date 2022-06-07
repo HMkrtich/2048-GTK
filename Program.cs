@@ -25,6 +25,8 @@ class MovingBoard{
     int[,] prevBoard;
     int score=0;
     int prevScore=0;
+    List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)> forAnime=
+    new List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)>();
     (int ver,int hor)[] dirs={(1,0),    // down
                               (0,1),    // right
                               (-1,0),   // up
@@ -64,6 +66,9 @@ class MovingBoard{
         prevScore=0;
         gameOver=false;
     }
+    public List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)> getAnime(){
+        return forAnime;
+    }
     bool permitted(){
         for(int i=0;i<dim;i++){
             for(int j=0;j<dim;j++){
@@ -73,6 +78,9 @@ class MovingBoard{
             }
         }
         return false;
+    }
+    public void initAnime(){
+        forAnime=new List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)>();
     }
     (int x,int y,int z,int dz) mapping(int i,int j,Direction dir){
         if(dir==Up)return(j,i,j,1);             // up
@@ -95,6 +103,7 @@ class MovingBoard{
                         isFirst=!isFirst;
                     }
                     board[z,y]=EMPTY;
+                    forAnime.Add((val,z,y,x,y,-dz,0));
                     break;
                 }
                 z+=dz;
@@ -113,6 +122,7 @@ class MovingBoard{
                         isFirst=!isFirst;
                     }
                     board[x,z]=EMPTY;
+                    forAnime.Add((val,x,z,x,y,0,-dz));
                     break;
                 }
                 z+=dz;
@@ -141,6 +151,8 @@ class MovingBoard{
                         isFirst=!isFirst;
                     }
                     board[x,y]=2*val;
+                    // for animation
+                    forAnime.Add((val,z,y,x,y,-dz,0));
                     board[z,y]=EMPTY;
                     prevScore=score;
                     score+=2*val;
@@ -163,6 +175,8 @@ class MovingBoard{
                         isFirst=!isFirst;
                     }
                     board[x,y]=2*val;
+                    // for animation
+                    forAnime.Add((val,x,z,x,y,0,-dz));
                     board[x,z]=EMPTY;
                     prevScore=score;
                     score+=2*val;
@@ -288,6 +302,8 @@ class View : DrawingArea {
     // Specification of the fonts and margins of the "n x n" game 
     Dictionary<int,(int l,int d,int font)> sizes=new Dictionary<int,(int l,int d,int font)>()
                                             {{3,(145,135,35)},{4,(110,100,30)},{5,(87,77,20)}};
+    public List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)> forAnime=
+    new List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)>();
     Color black = new Color(0, 0, 0),
           blue = new Color(0, 0, 1),
           light_green = new Color(0.56, 0.93, 0.56),
@@ -298,12 +314,13 @@ class View : DrawingArea {
     MovingBoard game=new MovingBoard(4);
     int size; // dimension
     bool menu=true;
+    bool animation=false;
     double timer=5,dt=0.03;
     public View(){
         AddEvents((int)EventMask.KeyPressMask);
         AddEvents((int)EventMask.ButtonPressMask);
     }
-    protected override  bool OnDrawn (Context c) {
+    protected override bool OnDrawn (Context c) {
         if(menu){
             c.SetSourceColor(pink);
             c.Rectangle(x: 30, y: 30, width: 390, height: 540);
@@ -338,6 +355,24 @@ class View : DrawingArea {
                     }
                 }
             }
+            if(animation){
+                animation=false;
+                for(int i=0;i<forAnime.Count;i++){
+                    (int val,int x1,int y1,int x2,int y2,int dx1,int dy1) elem=forAnime[i];
+                    if(!(elem.x1==elem.x2 && elem.y1==elem.y2)){
+                        c.SetSourceColor(colors[forAnime[i].val]);
+                        c.Rectangle(x: elem.y1, y: elem.x1, width: sizes[size].d, height: sizes[size].d);
+                        c.Fill();
+                        if(((elem.x1+elem.dx1-elem.x2)*(elem.x1-elem.x2)<0) || 
+                           ((elem.y1+elem.dy1-elem.y2)*(elem.y1-elem.y2))<0){
+                               forAnime[i]=(elem.val,elem.x2,elem.y2,elem.x2,elem.y2,elem.dx1,elem.dy1);
+                            }
+                        else{
+                            forAnime[i]=(elem.val,elem.x1+elem.dx1,elem.y1+elem.dy1,elem.x2,elem.y2,elem.dx1,elem.dy1);
+                        }
+                    }
+                }
+            }
             c.SetSourceColor(grey); // Displaying the Score
             centerText(c,390,60,15,"Score");
             centerText(c,390,85,20,game.getScore().ToString());
@@ -355,6 +390,28 @@ class View : DrawingArea {
             }
         }
         return true;
+    }
+    public void cleanAnime(){
+        int n=forAnime.Count;
+        while(n-1>-1){
+            forAnime.RemoveAt(n-1);
+            n--;
+        }
+    }
+    public void animate(){
+        int animSpeed=40;
+        var forAnime1=game.getAnime();
+        for(int i=0;i<forAnime1.Count;i++){
+            (int val,int x1,int y1,
+            int x2,int y2,int dx1,int dy1)elem=forAnime1[i];
+            forAnime.Add((elem.val,160+elem.x1*sizes[size].l,10+forAnime1[i].y1*sizes[size].l,
+                                160+elem.x2*sizes[size].l,10+elem.y2*sizes[size].l,
+                                animSpeed*elem.dx1,animSpeed*elem.dy1));
+        }
+        game.initAnime();
+    }
+    public void setAnime(){
+        animation=true;
     }
     static Color color(int r, int g, int b) => new Color(r / 255.0, g / 255.0, b / 255.0);
     static void centerText(Context c, int x, int y,int font, string s) {
@@ -417,6 +474,8 @@ class View : DrawingArea {
         timer=Math.Round(timer, 2);
         if(timer<=0){
             moveRandom();
+            cleanAnime();
+            animate();
             timer=5;
         }
     }
@@ -426,6 +485,7 @@ class MyWindow : Gtk.Window {
     public MyWindow() : base("2048") {
         Resize(450, 600);
         Add(view);  // add an Area to the window
+        Timeout.Add(1, animation);
         Timeout.Add(30, on_timeout);
     }
      bool on_timeout() {
@@ -433,22 +493,35 @@ class MyWindow : Gtk.Window {
         QueueDraw();
         return true;
     }
+    bool animation(){
+        view.setAnime();
+        QueueDraw();
+        return true;
+    }
     protected override bool OnKeyPressEvent(EventKey e) {
         if (e.Key == Key.Left){
             view.move(Left);
             view.resetTimer();
+            view.cleanAnime();
+            view.animate();
         }
         else if (e.Key == Key.Right){
             view.move(Right);
             view.resetTimer();
+            view.cleanAnime();
+            view.animate();
         }
         else if (e.Key == Key.Up){
             view.move(Up);
             view.resetTimer();
+            view.cleanAnime();
+            view.animate();
         }
         else if (e.Key == Key.Down){
             view.move(Down);
             view.resetTimer();
+            view.cleanAnime();
+            view.animate();
         }
         QueueDraw();
         return true;
