@@ -386,7 +386,7 @@ class View : DrawingArea {
             centerText(c,60,75,15,"MENU");
             if(game.getGameState()){  // Displaying the game over screen
                 c.SetSourceColor(black);
-                centerText(c,500,225,30,"Game Over!");
+                centerText(c,225,300,30,"Game Over!");
             }
         }
         return true;
@@ -443,13 +443,15 @@ class View : DrawingArea {
             }
         }
         else{
-            if(x<=330 && x>=230 && y<=110 && y>=50){
-                game.repeat();
-                timer=5;
-            }
-            if(x<=220 && x>=120 && y<=110 && y>=50){
-                game.restart();
-                timer=5;
+            if(!game.getGameState()){
+                if(x<=330 && x>=230 && y<=110 && y>=50){
+                    game.repeat();
+                    timer=5;
+                }
+                if(x<=220 && x>=120 && y<=110 && y>=50){
+                    game.restart();
+                    timer=5;
+                }
             }
             if(x<=110 && x>=10 && y<=110 && y>=50){
                 menu=true;
@@ -470,13 +472,15 @@ class View : DrawingArea {
         timer=5;
     }
     public void updateTime(){
-        timer-=dt;
-        timer=Math.Round(timer, 2);
-        if(timer<=0){
-            moveRandom();
-            cleanAnime();
-            animate();
-            timer=5;
+        if(!game.getGameState()){
+            timer-=dt;
+            timer=Math.Round(timer, 2);
+            if(timer<=0){
+                moveRandom();
+                cleanAnime();
+                animate();
+                timer=5;
+            }
         }
     }
 }
