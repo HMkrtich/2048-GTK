@@ -16,6 +16,23 @@ enum Direction{
     Down,
     Stay
 };
+public record AnimeRecord
+{
+    public AnimeRecord(int val,int x1,int y1,int x2,int y2,int dx1,int dy1){
+        this.val=val;
+        this.x1=x1;   this.y1=y1;
+        this.x2=x2;   this.y2=y2;
+        this.dx1=dx1; this.dy1=dy1;
+    }
+    public void Print(){WriteLine($"val = {val}, x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, dx1 = {dx1}, dy1 = {dy1}");}
+    public int val { get; set; } = 0;
+    public int x1 { get; set; } = 0;
+    public int y1 { get; set; } = 0;
+    public int x2 { get; set; } = 0;
+    public int y2 { get; set; } = 0;
+    public int dx1 { get; set; } = 0;
+    public int dy1 { get; set; } = 0;
+};
 class MovingBoard{
     int[,] board;
     Random rand=new Random();
@@ -25,8 +42,7 @@ class MovingBoard{
     int[,] prevBoard;
     int score=0;
     int prevScore=0;
-    List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)> forAnime=
-    new List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)>();
+    List<AnimeRecord> forAnime=new List<AnimeRecord>();
     (int ver,int hor)[] dirs={(1,0),    // down
                               (0,1),    // right
                               (-1,0),   // up
@@ -66,7 +82,7 @@ class MovingBoard{
         prevScore=0;
         gameOver=false;
     }
-    public List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)> getAnime(){
+    public List<AnimeRecord> getAnime(){
         return forAnime;
     }
     bool permitted(){
@@ -80,7 +96,7 @@ class MovingBoard{
         return false;
     }
     public void initAnime(){
-        forAnime=new List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)>();
+        forAnime=new List<AnimeRecord>();
     }
     (int x,int y,int z,int dz) mapping(int i,int j,Direction dir){
         if(dir==Up)return(j,i,j,1);             // up
@@ -103,7 +119,7 @@ class MovingBoard{
                         isFirst=!isFirst;
                     }
                     board[z,y]=EMPTY;
-                    forAnime.Add((val,z,y,x,y,-dz,0));
+                    forAnime.Add(new (val,z,y,x,y,-dz,0));
                     break;
                 }
                 z+=dz;
@@ -122,7 +138,7 @@ class MovingBoard{
                         isFirst=!isFirst;
                     }
                     board[x,z]=EMPTY;
-                    forAnime.Add((val,x,z,x,y,0,-dz));
+                    forAnime.Add(new (val,x,z,x,y,0,-dz));
                     break;
                 }
                 z+=dz;
@@ -152,7 +168,7 @@ class MovingBoard{
                     }
                     board[x,y]=2*val;
                     // for animation
-                    forAnime.Add((val,z,y,x,y,-dz,0));
+                    forAnime.Add(new (val,z,y,x,y,-dz,0));
                     board[z,y]=EMPTY;
                     prevScore=score;
                     score+=2*val;
@@ -176,7 +192,7 @@ class MovingBoard{
                     }
                     board[x,y]=2*val;
                     // for animation
-                    forAnime.Add((val,x,z,x,y,0,-dz));
+                    forAnime.Add(new (val,x,z,x,y,0,-dz));
                     board[x,z]=EMPTY;
                     prevScore=score;
                     score+=2*val;
@@ -302,8 +318,7 @@ class View : DrawingArea {
     // Specification of the fonts and margins of the "n x n" game 
     Dictionary<int,(int l,int d,int font)> sizes=new Dictionary<int,(int l,int d,int font)>()
                                             {{3,(145,135,35)},{4,(110,100,30)},{5,(87,77,20)}};
-    public List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)> forAnime=
-    new List<(int val,int x1,int y1,int x2,int y2,int dx1,int dy1)>();
+    List<AnimeRecord>forAnime=new List<AnimeRecord>();
     Color black = new Color(0, 0, 0),
           blue = new Color(0, 0, 1),
           light_green = new Color(0.56, 0.93, 0.56),
@@ -320,7 +335,7 @@ class View : DrawingArea {
         AddEvents((int)EventMask.KeyPressMask);
         AddEvents((int)EventMask.ButtonPressMask);
     }
-    protected override bool OnDrawn (Context c) {
+    protected override  bool OnDrawn (Context c) {
         if(menu){
             c.SetSourceColor(pink);
             c.Rectangle(x: 30, y: 30, width: 390, height: 540);
@@ -358,17 +373,17 @@ class View : DrawingArea {
             if(animation){
                 animation=false;
                 for(int i=0;i<forAnime.Count;i++){
-                    (int val,int x1,int y1,int x2,int y2,int dx1,int dy1) elem=forAnime[i];
+                    AnimeRecord elem=forAnime[i];
                     if(!(elem.x1==elem.x2 && elem.y1==elem.y2)){
                         c.SetSourceColor(colors[forAnime[i].val]);
                         c.Rectangle(x: elem.y1, y: elem.x1, width: sizes[size].d, height: sizes[size].d);
                         c.Fill();
                         if(((elem.x1+elem.dx1-elem.x2)*(elem.x1-elem.x2)<0) || 
                            ((elem.y1+elem.dy1-elem.y2)*(elem.y1-elem.y2))<0){
-                               forAnime[i]=(elem.val,elem.x2,elem.y2,elem.x2,elem.y2,elem.dx1,elem.dy1);
+                               forAnime[i]=new (elem.val,elem.x2,elem.y2,elem.x2,elem.y2,elem.dx1,elem.dy1);
                             }
                         else{
-                            forAnime[i]=(elem.val,elem.x1+elem.dx1,elem.y1+elem.dy1,elem.x2,elem.y2,elem.dx1,elem.dy1);
+                            forAnime[i]=new (elem.val,elem.x1+elem.dx1,elem.y1+elem.dy1,elem.x2,elem.y2,elem.dx1,elem.dy1);
                         }
                     }
                 }
@@ -402,9 +417,8 @@ class View : DrawingArea {
         int animSpeed=40;
         var forAnime1=game.getAnime();
         for(int i=0;i<forAnime1.Count;i++){
-            (int val,int x1,int y1,
-            int x2,int y2,int dx1,int dy1)elem=forAnime1[i];
-            forAnime.Add((elem.val,160+elem.x1*sizes[size].l,10+forAnime1[i].y1*sizes[size].l,
+            AnimeRecord elem=forAnime1[i];
+            forAnime.Add(new (elem.val,160+elem.x1*sizes[size].l,10+forAnime1[i].y1*sizes[size].l,
                                 160+elem.x2*sizes[size].l,10+elem.y2*sizes[size].l,
                                 animSpeed*elem.dx1,animSpeed*elem.dy1));
         }
