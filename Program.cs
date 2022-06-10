@@ -315,7 +315,7 @@ class View : DrawingArea {
     int size; // dimension
     bool menu=true;
     bool animation=false;
-    double timer=5,dt=0.03;
+    double timer=5,dt=0.5;
     public View(){
         AddEvents((int)EventMask.KeyPressMask);
         AddEvents((int)EventMask.ButtonPressMask);
@@ -377,7 +377,7 @@ class View : DrawingArea {
             centerText(c,390,60,15,"Score");
             centerText(c,390,85,20,game.getScore().ToString());
             centerText(c,390,60,15,"Score"); // Displaying the Timer
-            centerText(c,225,130,20,timer.ToString());
+            centerText(c,225,130,20,String.Format("{0:0.0}", timer));
             c.SetSourceColor(light_green);  // Displaying Repeat button
             centerText(c,280,75,15,"REPEAT");
             c.SetSourceColor(light_green); // Displaying Restart button
@@ -490,7 +490,7 @@ class MyWindow : Gtk.Window {
         Resize(450, 600);
         Add(view);  // add an Area to the window
         Timeout.Add(1, animation);
-        Timeout.Add(30, on_timeout);
+        Timeout.Add(500, on_timeout);
     }
      bool on_timeout() {
         view.updateTime();
