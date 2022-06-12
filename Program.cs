@@ -16,7 +16,7 @@ enum Direction{
     Down,
     Stay
 };
-record AnimeRecord(int val, int y1, int x1, int y2, int x2, int dy1, int dx1) {
+record AnimeRecord(int val, int x1, int y1, int x2, int y2, int dx1, int dy1) {
 }
 class MovingBoard{
     int[,] board;
@@ -79,18 +79,24 @@ class MovingBoard{
     public void initAnime(){
         forAnime=new List<AnimeRecord>();
     }
-    (int x,int y,int z,int dz) mapping(int y,int x,Direction dir){
-        if(dir==Up)return(x,y,x,1);             // up
-        if(dir==Down)return(dim-x-1,dim-y-1,dim-x-1,-1);   // down
-        if(dir==Left)return(y,x,x,1);           // left
-        if(dir==Right)return(dim-y-1,dim-x-1,dim-x-1,-1);  // right
+    (int,int) mapping1(int x,int y,Direction dir){
+        if(dir==Up)return(y,x);             // up
+        if(dir==Down)return(dim-y-1,dim-x-1);   // down
+        if(dir==Left)return(x,y);           // left
+        if(dir==Right)return(dim-x-1,dim-y-1);  // right
         throw new Exception("invalid direction");
     }
-    (bool,bool) moveEmptyDir(Direction dir,int x,int y,int z,int dz,bool moved,bool isFirst){
+    (int,int) mapping2(int x,int y,Direction dir){
+        if(dir==Up) return(0,1);
+        if(dir==Down)return(0,-1);
+        if(dir==Left) return(1,0);
+        if(dir==Right) return(-1,0);
+        throw new Exception("invalid direction");
+    }
+    (bool,bool) moveEmptyDir(Direction dir,int x,int y,bool moved,bool isFirst){
         int val=EMPTY;
-        (int x1,int dx1,int y1, int dy1)=(dir==Up || dir ==Down)?(z,dz,y,0):
-                                        (dir==Right || dir ==Left)?(x,0,z,dz):
-                                        throw new Exception("invalid direction");
+        (int x1,int y1)=(x,y);
+        (int dx1,int dy1)=mapping2(x,y,dir);
         while(true){
             val=board[x1,y1];
             if(val!=EMPTY){
@@ -112,12 +118,11 @@ class MovingBoard{
         board[x,y]=val;
         return (moved,isFirst);
     }
-    (bool,bool) moveNonEmptyDir(Direction dir,int x,int y,int z,int dz,bool moved,bool isFirst){
+    (bool,bool) moveNonEmptyDir(Direction dir,int x,int y,bool moved,bool isFirst){
         int val=EMPTY;
         int value=board[x,y];
-        (int x1,int dx1,int y1, int dy1)=(dir==Up || dir ==Down)?(z,dz,y,0):
-                                        (dir==Right || dir ==Left)?(x,0,z,dz):
-                                        throw new Exception("invalid direction");
+        (int x1,int y1)=(x, y);
+        (int dx1,int dy1)=mapping2(x,y,dir);
          while(true){
             y1+=dy1;
             x1+=dx1;
@@ -155,11 +160,11 @@ class MovingBoard{
         bool isFirst=true;
         for(int x=0;x<dim;x++){ 
             for(int y=0;y<dim;y++){
-                (int x_,int y_,int z,int dz)=mapping(x,y,dir);
+                (int x_,int y_)=mapping1(x,y,dir);
                 // Case 1: the value is empty
-                if(board[x_,y_]==EMPTY)(moved,isFirst)=moveEmptyDir(dir,x_,y_,z,dz,moved,isFirst);
+                if(board[x_,y_]==EMPTY)(moved,isFirst)=moveEmptyDir(dir,x_,y_,moved,isFirst);
                 // Case 2: the value is not empty
-                if(board[x_,y_]!=EMPTY)(moved,isFirst)=moveNonEmptyDir(dir,x_,y_,z,dz,moved,isFirst);
+                if(board[x_,y_]!=EMPTY)(moved,isFirst)=moveNonEmptyDir(dir,x_,y_,moved,isFirst);
             }
         }
         return moved;
@@ -206,9 +211,9 @@ class MovingBoard{
         // there are two neighbor tiles that
         // have the same value
         // then game is not over
-        for(int y=0;y<dim;y++){
-            for(int x=0;x<dim;x++){
-                if(board[y,x]==0 || hasEqualNeighbor(y,x)){
+        for(int x=0;x<dim;x++){ 
+            for(int y=0;y<dim;y++){
+                if(board[x,y]==0 || hasEqualNeighbor(x,y)){
                     return;
                 }
             }
@@ -220,8 +225,8 @@ class MovingBoard{
         if(moved){
             int num=rand.Next(1,3);
             int binPow=(int)Math.Pow(2,num);
-            (int y,int x)=newPos();
-            board[y,x]=binPow;
+            (int x,int y)=newPos();
+            board[x,y]=binPow;
         }
         // Checking whether the game is Over or not
         over();  
@@ -294,15 +299,15 @@ class View : DrawingArea {
             c.Rectangle(x: 120, y: 115, width: 210, height: 30);
             c.Rectangle(x: 0, y: 150, width: 450, height: 450);
             c.Fill();
-            for(int y=0;y<size;y++){
-                for(int x=0;x<size;x++){
-                    c.SetSourceColor(colors[game.getTile(y,x)]);
+            for(int x=0;x<size;x++){
+                for(int y=0;y<size;y++){
+                    c.SetSourceColor(colors[game.getTile(x,y)]);
                     c.Rectangle(x: 10+x*sizes[size].l, y: 160+y*sizes[size].l, width: sizes[size].d, height: sizes[size].d);
                     c.Fill();
-                    if(game.getTile(y,x)>0){
+                    if(game.getTile(x,y)>0){
                         c.SetSourceColor(white);
                         centerText(c,10+sizes[size].d/2+sizes[size].l*x,160+sizes[size].d/2+sizes[size].l*y,
-                                                                sizes[size].font,game.getTile(y,x).ToString());
+                                                                sizes[size].font,game.getTile(x,y).ToString());
                     }
                 }
             }
@@ -316,10 +321,10 @@ class View : DrawingArea {
                         c.Fill();
                         if(((elem.x1+elem.dx1-elem.x2)*(elem.x1-elem.x2)<0) || 
                            ((elem.y1+elem.dy1-elem.y2)*(elem.y1-elem.y2))<0){
-                               forAnime[i]=new (elem.val,elem.y2,elem.x2,elem.y2,elem.x2,elem.dy1,elem.dx1);
+                               forAnime[i]=new (elem.val,elem.x2,elem.y2,elem.x2,elem.y2,elem.dx1,elem.dy1);
                             }
                         else{
-                            forAnime[i]=new (elem.val,elem.y1+elem.dy1,elem.x1+elem.dx1,elem.y2,elem.x2,elem.dy1,elem.dx1);
+                            forAnime[i]=new (elem.val,elem.x1+elem.dx1,elem.y1+elem.dy1,elem.x2,elem.y2,elem.dx1,elem.dy1);
                         }
                     }
                 }
@@ -349,9 +354,9 @@ class View : DrawingArea {
         var forAnime1=game.getAnime();
         for(int i=0;i<forAnime1.Count;i++){
             AnimeRecord elem=forAnime1[i];
-            forAnime.Add(new (elem.val,160+elem.y1*sizes[size].l,10+forAnime1[i].x1*sizes[size].l,
-                                160+elem.y2*sizes[size].l,10+elem.x2*sizes[size].l,
-                                ANIM_SPEED*elem.dy1,ANIM_SPEED*elem.dx1));
+            forAnime.Add(new (elem.val,10+forAnime1[i].x1*sizes[size].l,160+elem.y1*sizes[size].l,
+                                10+elem.x2*sizes[size].l,160+elem.y2*sizes[size].l,
+                                ANIM_SPEED*elem.dx1,ANIM_SPEED*elem.dy1));
         }
         game.initAnime();
     }
@@ -375,14 +380,16 @@ class View : DrawingArea {
     protected override bool OnButtonPressEvent (EventButton e) {
         (double x,double y)= (e.X, e.Y);
         if(menu){
-            if(x<=320 && x>=130 && y<=240 && y>=180){
-                startGame(3);
-            }
-            if(x<=320 && x>=130 && y<=330 && y>=270){
-                startGame(4);
-            }
-            if(x<=320 && x>=130 && y<=420 && y>=360){
-                startGame(5);
+            if(x<=320 && x>=130){
+                if(y<=240 && y>=180){
+                    startGame(3);
+                }
+                else if(y<=330 && y>=270){
+                    startGame(4);
+                }
+                else if(y<=420 && y>=360){
+                    startGame(5);
+                }
             }
         }
         else{
@@ -469,6 +476,5 @@ class Hello {
         MyWindow w = new MyWindow();
         w.ShowAll();
         Application.Run();
-
     }
 }
